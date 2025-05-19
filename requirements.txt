@@ -1,0 +1,15 @@
+python-docx
+PyMuPDF
+Flask==3.1.0
+langdetect==1.0.9
+openai==0.28
+Pillow==11.2.1
+presidio_analyzer==2.2.358
+pytesseract==0.3.13
+transformers==4.51.3
+torch
+tiktoken
+protobuf
+sentencepiece
+sacremoses
+reportlab

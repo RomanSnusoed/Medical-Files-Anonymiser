@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Processing Result</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Processing Result</h1>
+
+      <!-- Первое окно: Чистый текст -->
+      <div class="window">
+        <h2>Extracted Text</h2>
+        <pre>{{ extracted_text }}</pre>
+      </div>
+
+      <!-- Второе окно: Логи очистки -->
+      <div class="window">
+        <h2>Cleaning Logs</h2>
+        <ul>
+          {% for log in logs %}
+          <li>{{ log }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- Третье окно: Очищенный текст -->
+      <div class="window">
+        <h2>Cleaned Text</h2>
+        <pre>{{ cleaned_text }}</pre>
+      </div>
+
+      <!-- Четвертое окно: Объяснение от ChatGPT -->
+      <div class="window">
+        <h2>ChatGPT Explanation</h2>
+        <form action="/generate_explanation" method="post">
+          <input type="hidden" name="cleaned_text" value="{{ cleaned_text }}" />
+          <input
+            type="hidden"
+            name="extracted_text"
+            value="{{ extracted_text }}"
+          />
+          {% for log in logs %}
+          <input type="hidden" name="logs" value="{{ log }}" />
+          {% endfor %}
+          <button type="submit">Generate Explanation</button>
+        </form>
+        {% if explanation %}
+        <div>
+          <h3>Explanation:</h3>
+          <p>{{ explanation }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>

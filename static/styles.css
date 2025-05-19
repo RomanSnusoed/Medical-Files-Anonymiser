@@ -1,0 +1,110 @@
+body {
+  font-family: "Roboto", sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f0f2f5;
+  color: #333;
+}
+
+.container {
+  width: 80%;
+  max-width: 1200px;
+  margin: 40px auto;
+  text-align: center;
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  color: #2c3e50;
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+}
+
+form {
+  margin: 30px 0;
+}
+
+form input[type="file"] {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+form button {
+  padding: 12px 25px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+form button:hover {
+  background-color: #2980b9;
+  transform: scale(1.05);
+}
+
+form button:active {
+  transform: scale(0.95);
+}
+
+.window {
+  border: 1px solid #e0e0e0;
+  padding: 20px;
+  margin: 20px 0;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: left;
+  height: 300px; /* Установите фиксированную высоту */
+  overflow-y: auto; /* Добавьте вертикальную прокрутку */
+}
+
+.window h2 {
+  color: #34495e;
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+}
+
+pre,
+ul {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  font-size: 1rem;
+  overflow-x: auto;
+}
+
+ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+ul li {
+  margin: 5px 0;
+  padding: 8px;
+  background: #ecf0f1;
+  border-radius: 5px;
+}
+
+iframe {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+footer {
+  margin-top: 40px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
