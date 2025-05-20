@@ -19,6 +19,7 @@ def preprocess_image(image_path):
     return img
 
 def correct_image_orientation(image):
+    
     """
     Detects and corrects the orientation of the image using Tesseract OSD.
     """

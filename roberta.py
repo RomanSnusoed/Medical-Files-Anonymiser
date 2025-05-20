@@ -1,5 +1,6 @@
 from transformers import pipeline
 
+
 class XlmRobertaNER:
     def __init__(self, supported_languages=None):
         self.ner_pipeline = pipeline("ner", model="Davlan/xlm-roberta-base-ner-hrl", grouped_entities=True)
@@ -9,9 +10,7 @@ class XlmRobertaNER:
         if not text:
             return []
 
-       
         print(f"XlmRobertaNER analyzing text: {text}")
-
         ner_results = self.ner_pipeline(text)
         results = []
         for entity in ner_results:
@@ -34,3 +33,4 @@ class XlmRobertaNER:
             "MISC": "OTHER"
         }
         return mapping.get(label, "OTHER")
+        

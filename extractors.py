@@ -1,4 +1,4 @@
-import fitz   
+import fitz
 import pytesseract
 from PIL import Image
 import docx
@@ -8,6 +8,7 @@ from utils import preprocess_image, correct_image_orientation
 
 # Set the path to the Tesseract executable
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 
 def extract_text_from_image(image_path):
     """
@@ -21,6 +22,7 @@ def extract_text_from_image(image_path):
     except Exception as e:
         print(f"Error extracting text from image: {e}")
         return ""
+
 
 def extract_text_from_pdf(pdf_path):
     """
@@ -41,9 +43,9 @@ def extract_text_from_pdf(pdf_path):
         pdf_document = None
 
     # If no text found, extract from images
-    if pdf_document:   
+    if pdf_document:
         print("Text not found in PDF, extracting images...")
-        os.makedirs("processed_images", exist_ok=True)  
+        os.makedirs("processed_images", exist_ok=True)
         for page_number in range(len(pdf_document)):
             page = pdf_document[page_number]
             images = page.get_images(full=True)
@@ -59,6 +61,7 @@ def extract_text_from_pdf(pdf_path):
                 text += pytesseract.image_to_string(image) + "\n"
     return text
 
+
 def extract_text_from_docx(docx_path):
     """
     Extracts text from a DOCX file.
@@ -72,3 +75,4 @@ def extract_text_from_docx(docx_path):
     except Exception as e:
         print(f"Error extracting text from docx: {e}")
         return ""
+        

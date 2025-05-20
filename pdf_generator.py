@@ -3,8 +3,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 
+
 def generate_pdf_with_highlights(original_text, cleaned_text, output_folder="pdf_outputs"):
-   
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -17,29 +17,24 @@ def generate_pdf_with_highlights(original_text, cleaned_text, output_folder="pdf
     width, height = letter
     c.setFont("Helvetica", 10)
 
-   
     cleaned_lines = cleaned_text.splitlines()
-
-    y = height - 50  
-    line_height = 12  
+    y = height - 50
+    line_height = 12
 
     for line in cleaned_lines:
-        if y < 50:  
+        if y < 50:
             c.showPage()
             c.setFont("Helvetica", 10)
             y = height - 50
 
-        
         parts = line.split("[REDACTED]")
-        x = 50  
+        x = 50
 
         for i, part in enumerate(parts):
-            
             c.setFillColor(colors.black)
             c.drawString(x, y, part)
             x += c.stringWidth(part, "Helvetica", 10)
 
-            
             if i < len(parts) - 1:
                 c.setFillColor(colors.red)
                 c.drawString(x, y, "[REDACTED]")
@@ -48,4 +43,4 @@ def generate_pdf_with_highlights(original_text, cleaned_text, output_folder="pdf
         y -= line_height
 
     c.save()
-    print(f"PDF-файл сохранён по пути: {output_path}")
+    print(f"PDF saved at: {output_path}")

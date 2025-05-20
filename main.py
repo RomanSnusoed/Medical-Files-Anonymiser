@@ -1,21 +1,30 @@
-import cProfile
 from extractors import (
     extract_text_from_pdf,
     extract_text_from_image,
     extract_text_from_docx,
 )
-
-from cleaners import process_text_in_chunks  
+from cleaners import process_text_in_chunks
 from openai_utils import generate_explanation
-from translator import translate_text_de_to_en, translate_text_en_to_de, translate_text_ru_to_en, translate_text_en_to_ru
+from translator import (
+    translate_text_de_to_en,
+    translate_text_en_to_de,
+    translate_text_ru_to_en,
+    translate_text_en_to_ru,
+)
 from langdetect import detect
 from pdf_generator import generate_pdf_with_highlights
 
-mapping = {"pdf": extract_text_from_pdf, "docx": extract_text_from_docx, "image": extract_text_from_image}
-# click try to use
+mapping = {
+    "pdf": extract_text_from_pdf,
+    "docx": extract_text_from_docx,
+    "image": extract_text_from_image,
+}
+
 if __name__ == "__main__":
-    file_path = r"C:\Users\38066\Dr-Adem Dropbox\Team General\AI\Reports\Dummy Text files\001fakede.docx"
-    extracted_text = ""  
+    file_path = (
+        r"C:\Users\38066\Dr-Adem Dropbox\Team General\AI\Reports\Dummy Text files\001fakede.docx"
+    )
+    extracted_text = ""
 
     # Extract text depending on file type
     if file_path.endswith(".pdf"):
@@ -47,7 +56,7 @@ if __name__ == "__main__":
             extracted_text = translate_text_ru_to_en(extracted_text)
             print("Translated text:")
             print(extracted_text)
-        
+
         # Clean the text
         cleaned_text, logs = process_text_in_chunks(extracted_text, chunk_size=300)
         print("\nCleaned text:")
@@ -66,10 +75,14 @@ if __name__ == "__main__":
             print(cleaned_text)
 
         # Generate PDF with highlights
-        generate_pdf_with_highlights(extracted_text, cleaned_text, output_folder="output_folder")
-        
+        generate_pdf_with_highlights(
+            extracted_text, cleaned_text, output_folder="output_folder"
+        )
+
         # Ask user if they want to send text to ChatGPT for explanation
-        user_input = input("Send text to ChatGPT for explanation? (yes/no): ").strip().lower()
+        user_input = input(
+            "Send text to ChatGPT for explanation? (yes/no): "
+        ).strip().lower()
         if user_input in ["yes", "y", "ja", "да"]:
             explanation = generate_explanation(cleaned_text)
             print("\nExplanation:")
@@ -78,7 +91,9 @@ if __name__ == "__main__":
             print("Request to ChatGPT cancelled.")
 
         # Ask user if they want to show cleaning logs
-        user_input = input("Show cleaning logs? (yes/no): ").strip().lower()
+        user_input = input(
+            "Show cleaning logs? (yes/no): "
+        ).strip().lower()
         if user_input in ["yes", "y", "ja", "да"]:
             print("\nLogs:")
             for log in logs:

@@ -1,5 +1,5 @@
-import re
 from transformers import MarianMTModel, MarianTokenizer
+
 
 def translate_text_de_to_en(text, max_length=500):
     """
@@ -9,19 +9,20 @@ def translate_text_de_to_en(text, max_length=500):
     tokenizer = MarianTokenizer.from_pretrained(model_name)
     model = MarianMTModel.from_pretrained(model_name)
 
-    chunks = text.split("\n")  
+    chunks = text.split("\n")
     translated_chunks = []
 
     for chunk in chunks:
-        if chunk.strip():  
+        if chunk.strip():
             tokenized_text = tokenizer(chunk, return_tensors="pt", padding=True, truncation=True)
             translated = model.generate(**tokenized_text)
             translated_text = tokenizer.decode(translated[0], skip_special_tokens=True)
             translated_chunks.append(translated_text)
         else:
-            translated_chunks.append("")  
+            translated_chunks.append("")
 
     return "\n".join(translated_chunks)
+
 
 def translate_text_ru_to_en(text, max_length=500):
     """
@@ -31,19 +32,20 @@ def translate_text_ru_to_en(text, max_length=500):
     tokenizer = MarianTokenizer.from_pretrained(model_name)
     model = MarianMTModel.from_pretrained(model_name)
 
-    chunks = text.split("\n")  
+    chunks = text.split("\n")
     translated_chunks = []
 
     for chunk in chunks:
-        if chunk.strip():  
+        if chunk.strip():
             tokenized_text = tokenizer(chunk, return_tensors="pt", padding=True, truncation=True)
             translated = model.generate(**tokenized_text)
             translated_text = tokenizer.decode(translated[0], skip_special_tokens=True)
             translated_chunks.append(translated_text)
         else:
-            translated_chunks.append("")  
+            translated_chunks.append("")
 
     return "\n".join(translated_chunks)
+
 
 def translate_text_en_to_de(text, max_length=500):
     """
@@ -53,19 +55,20 @@ def translate_text_en_to_de(text, max_length=500):
     tokenizer = MarianTokenizer.from_pretrained(model_name)
     model = MarianMTModel.from_pretrained(model_name)
 
-    chunks = text.split("\n")  
+    chunks = text.split("\n")
     translated_chunks = []
 
     for chunk in chunks:
-        if chunk.strip():  
+        if chunk.strip():
             tokenized_text = tokenizer(chunk, return_tensors="pt", padding=True, truncation=True)
             translated = model.generate(**tokenized_text)
             translated_text = tokenizer.decode(translated[0], skip_special_tokens=True)
             translated_chunks.append(translated_text)
         else:
-            translated_chunks.append("")  
+            translated_chunks.append("")
 
     return "\n".join(translated_chunks)
+
 
 def translate_text_en_to_ru(text, max_length=500):
     """
@@ -75,19 +78,20 @@ def translate_text_en_to_ru(text, max_length=500):
     tokenizer = MarianTokenizer.from_pretrained(model_name)
     model = MarianMTModel.from_pretrained(model_name)
 
-    chunks = text.split("\n")  
+    chunks = text.split("\n")
     translated_chunks = []
 
     for chunk in chunks:
-        if chunk.strip():  
+        if chunk.strip():
             tokenized_text = tokenizer(chunk, return_tensors="pt", padding=True, truncation=True)
             translated = model.generate(**tokenized_text)
             translated_text = tokenizer.decode(translated[0], skip_special_tokens=True)
             translated_chunks.append(translated_text)
         else:
-            translated_chunks.append("")  
+            translated_chunks.append("")
 
     return "\n".join(translated_chunks)
+
 
 def split_text_into_chunks(text, max_length=500):
     """
