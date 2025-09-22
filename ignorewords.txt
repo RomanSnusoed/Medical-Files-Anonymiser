@@ -1,6 +1,4 @@
-daily
-Roman
-Daily
+
 mg
 Alanine
 Transferrin
@@ -71,7 +69,8 @@ Homans
 Lung
 Lungs
 stated t 
-
+daily
+Daily
 a1-
 A1c
 aa.
