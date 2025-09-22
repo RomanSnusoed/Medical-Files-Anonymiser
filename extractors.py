@@ -4,16 +4,16 @@ from PIL import Image
 import docx
 import io
 import os
-from utils import preprocess_image, correct_image_orientation
 
-# Set the path to the Tesseract executable
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+from utils import ensure_tesseract_cmd, preprocess_image, correct_image_orientation
 
 
 def extract_text_from_image(image_path):
     """
     Extracts text from an image file using OCR.
     """
+    ensure_tesseract_cmd()
+
     try:
         img = preprocess_image(image_path)
         custom_config = r'--oem 3 --psm 6'
@@ -46,6 +46,7 @@ def extract_text_from_pdf(pdf_path):
     if pdf_document:
         print("Text not found in PDF, extracting images...")
         os.makedirs("processed_images", exist_ok=True)
+        ensure_tesseract_cmd()
         for page_number in range(len(pdf_document)):
             page = pdf_document[page_number]
             images = page.get_images(full=True)

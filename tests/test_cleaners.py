@@ -76,11 +76,13 @@ def test_regex_email_removal():
 
 
 def test_extract_from_image():
-    with patch("extractors.preprocess_image") as mock_preprocess, \
+    with patch("extractors.ensure_tesseract_cmd") as mock_ensure, \
+        patch("extractors.preprocess_image") as mock_preprocess, \
         patch("extractors.pytesseract.image_to_string", return_value="mocked_text"):
         mock_preprocess.return_value = MagicMock()
         text = extract_text_from_image("fake.img")
         assert text == "mocked_text"
+        mock_ensure.assert_called_once()
 
 
 
@@ -134,7 +136,8 @@ def test_preprocess_image_mock():
 
 
 def test_extract_text_from_image_not_found():
-    with patch("utils.Image.open", side_effect=FileNotFoundError):
+    with patch("extractors.ensure_tesseract_cmd"), \
+        patch("utils.Image.open", side_effect=FileNotFoundError):
         text = extract_text_from_image("no_such_file.jpg")
         assert text == ""
 
