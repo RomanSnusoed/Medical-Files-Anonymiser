@@ -1,21 +1,139 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Upload File</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='styles.css') }}"
-    />
-  </head>
-  <body>
-    <div class="container">
-      <h1>Upload Your File</h1>
-      <form action="/process" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" required />
-        <button type="submit">Upload</button>
-      </form>
+{% extends 'base.html' %}
+
+{% block title %}Document Privacy Studio{% endblock %}
+
+{% block content %}
+<section class="hero" id="top">
+  <div class="hero__content" data-animate-on-load>
+    <p class="eyebrow">End-to-end medical document workspace</p>
+    <h1>Transform sensitive reports into shareable clinical summaries.</h1>
+    <p class="hero__lead">
+      Upload PDFs, DOCX files, or scanned images. We will extract the text with OCR, redact
+      protected health information, translate across English, German, and Russian, and prepare a
+      highlighted PDF alongside an AI-generated explanation.
+    </p>
+    <div class="hero__cta">
+      <a class="primary-button" href="#upload">Begin with your document</a>
+      <a class="secondary-button" href="#workflow">See the workflow</a>
     </div>
-  </body>
-</html>
+  </div>
+  <div class="hero__preview" data-animate-on-load>
+    <div class="preview-card">
+      <h3>Privacy pipeline</h3>
+      <ol>
+        <li><span>1</span> Smart OCR &amp; language detection</li>
+        <li><span>2</span> Automated PHI redaction</li>
+        <li><span>3</span> Multilingual translation</li>
+        <li><span>4</span> AI medical explanation</li>
+      </ol>
+    </div>
+    <div class="preview-card preview-card--accent">
+      <h3>Supported uploads</h3>
+      <p class="preview-note">PDF, DOCX, JPG, PNG, TIFF up to 15&nbsp;MB</p>
+      <p class="preview-note">Highlights ready for board presentations</p>
+    </div>
+  </div>
+</section>
+
+<section class="upload" id="upload" data-animate-on-load>
+  <form
+    class="upload-form"
+    action="{{ url_for('process_file') }}"
+    method="post"
+    enctype="multipart/form-data"
+  >
+    <div class="upload-dropzone" data-dropzone>
+      <input
+        class="upload-input"
+        type="file"
+        name="file"
+        id="file"
+        accept=".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff"
+        required
+        data-file-input
+      />
+      <div class="dropzone-content">
+        <strong>Drag &amp; drop</strong>
+        <span>or click to select your file</span>
+        <small data-file-name>PDF, DOCX, JPG, PNG, or TIFF</small>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <label class="form-field">
+        <span class="form-label">Deliver final report in</span>
+        <select name="target_language" id="target_language" class="form-select">
+          {% for value, label in target_language_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="form-field checkbox">
+        <input type="checkbox" name="generate_pdf" checked />
+        <span>Generate PDF with highlighted redactions</span>
+      </label>
+    </div>
+
+    <button type="submit" class="primary-button primary-button--wide">
+      Sanitise &amp; analyse document
+    </button>
+  </form>
+</section>
+
+<section class="workflow" id="workflow">
+  <h2 data-animate-on-load>Everything your compliance review needs in one pass</h2>
+  <div class="workflow-steps">
+    <article class="step-card" data-animate-on-load>
+      <h3>1. Extract &amp; digitise</h3>
+      <p>
+        OCR every page with adaptive preprocessing to enhance contrast, fix orientation, and
+        recover text from scans that would normally fail automated checks.
+      </p>
+    </article>
+    <article class="step-card" data-animate-on-load>
+      <h3>2. Detect languages</h3>
+      <p>
+        Auto-detect whether the source is English, German, or Russian before translating to English
+        for the redaction engine.
+      </p>
+    </article>
+    <article class="step-card" data-animate-on-load>
+      <h3>3. Clean personally identifiable data</h3>
+      <p>
+        Combine Presidio, multilingual transformers, and regex sweeps to redact names, emails,
+        patient identifiers, and contextual clues across the entire document.
+      </p>
+    </article>
+    <article class="step-card" data-animate-on-load>
+      <h3>4. Re-translate &amp; package</h3>
+      <p>
+        Deliver the sanitised result in your chosen language, produce a highlighted PDF for audit
+        trails, and optionally request an AI-generated medical explanation.
+      </p>
+    </article>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <h2 data-animate-on-load>Why teams love DocGuardian</h2>
+  <div class="feature-grid">
+    <div class="feature-card" data-animate-on-load>
+      <h3>High-fidelity OCR</h3>
+      <p>Upscales, denoises, and deskews scans before running Tesseract for reliable character recognition.</p>
+    </div>
+    <div class="feature-card" data-animate-on-load>
+      <h3>Multilingual intelligence</h3>
+      <p>Translate between English, German, and Russian in either direction to keep global teams aligned.</p>
+    </div>
+    <div class="feature-card" data-animate-on-load>
+      <h3>Explainable AI</h3>
+      <p>Request a clinician-style narrative that summarises key findings after redaction.</p>
+    </div>
+    <div class="feature-card" data-animate-on-load>
+      <h3>Audit-ready output</h3>
+      <p>Download a PDF with colour-coded redactions plus a full log of every removal and regex match.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
