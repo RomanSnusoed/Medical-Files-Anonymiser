@@ -35,13 +35,11 @@ def is_valid_date_format(text):
     """Checks if the text matches a date format or contains age."""
     date_patterns = [
         r"\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b",  # dd/mm/yyyy or dd-mm-yyyy
-        r"\b\d{4}-\d{2}-\d{2}\b",            # yyyy-mm-dd
-        r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}, \d{4}\b",  # Month dd, yyyy
-        r"\b\d{1,2} (?:January|February|March|April|May|June|July|August|September|October|November|December),? \d{4}\b",  # dd Month yyyy
-        r"\b(?:Date of Birth|DOB|Report Date):?\s*\d{1,2} (?:January|February|March|April|May|June|July|August|September|October|November|December),? \d{4}\b",  # Date of Birth: dd Month yyyy
+        r"\b\d{4}-\d{2}-\d{2}\b",  # yyyy-mm-dd
+        r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s\d{1,2},\s\d{4}\b",  # Month dd, yyyy
+        r"\b\d{1,2}\s(?:January|February|March|April|May|June|July|August|September|October|November|December),?\s\d{4}\b",  # dd Month yyyy
+        r"\b(?:Date of Birth|DOB|Report Date):?\s*\d{1,2}\s(?:January|February|March|April|May|June|July|August|September|October|November|December),?\s\d{4}\b",  # Date of Birth: dd Month yyyy
         r"\b(?:Date of Birth|DOB|Report Date):?\s*\d{1,2}[/-]\d{1,2}[/-]\d{4}\b"  # Date of Birth: dd/mm/yyyy
-        r"\b\d{1,2}\s(?:January|February|March|April|May|June|July|August|September|October|November|December),?\s\d{4}\b"
-        r" \b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s\d{1,2}\)?"
     ]
     # Check if text matches date format
     if any(re.search(pattern, text) for pattern in date_patterns):

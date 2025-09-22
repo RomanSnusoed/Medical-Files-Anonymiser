@@ -1,5 +1,6 @@
 from cleaners import load_ignore_words
 from cleaners import clean_and_remove_personal_info
+from cleaners import is_valid_date_format
 from extractors import extract_text_from_pdf, extract_text_from_image, extract_text_from_docx
 from openai_utils import generate_explanation
 from utils import correct_image_orientation, preprocess_image
@@ -70,8 +71,8 @@ def test_regex_email_removal():
         mock_analyzer.analyze.return_value = []
         cleaned, logs = clean_and_remove_personal_info(text)
         assert "roman@dr-adem.com" not in cleaned
-        assert "[REDACTED]" in cleaned        
-        
+        assert "[REDACTED]" in cleaned
+
 
 
 def test_extract_from_image():
@@ -129,16 +130,18 @@ def test_preprocess_image_mock():
             mock_contrast.return_value.enhance.return_value = fake_img
             mock_brightness.return_value.enhance.return_value = fake_img
             img = preprocess_image("fake.img")
-            assert img == fake_img       
-
-
+            assert img == fake_img
 
 
 def test_extract_text_from_image_not_found():
     with patch("utils.Image.open", side_effect=FileNotFoundError):
         text = extract_text_from_image("no_such_file.jpg")
-        assert text == ""            
+        assert text == ""
 
+
+def test_is_valid_date_format_examples():
+    assert is_valid_date_format("Date of Birth: 01/02/2003")
+    assert is_valid_date_format("1 January 2020")
 
 
 def test_presidio_error_handling():
@@ -146,4 +149,4 @@ def test_presidio_error_handling():
     with patch("cleaners.analyzer") as mock_analyzer:
         mock_analyzer.analyze.side_effect = Exception("Presidio fail")
         cleaned, logs = clean_and_remove_personal_info(text)
-        assert "Presidio error" in " ".join(logs)        
+        assert "Presidio error" in " ".join(logs)
