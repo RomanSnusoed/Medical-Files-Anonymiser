@@ -44,3 +44,39 @@ def test_models_are_loaded_once_per_language():
         assert load_counts["Helsinki-NLP/opus-mt-en-ru"] == 1
     finally:
         translator._get_model_and_tokenizer.cache_clear()
+
+
+def test_translate_text_preserves_blank_lines(monkeypatch):
+    translated_chunks = []
+
+    class DummyTokenizer:
+        def __call__(self, text, **kwargs):
+            return {"text": text}
+
+        def decode(self, token, skip_special_tokens=True):
+            return f"decoded:{token}"
+
+    class DummyModel:
+        def generate(self, **kwargs):
+            translated_chunks.append(kwargs["text"])
+            return [kwargs["text"].upper()]
+
+    monkeypatch.setattr(
+        translator,
+        "_get_model_and_tokenizer",
+        lambda name: (DummyModel(), DummyTokenizer()),
+    )
+
+    result = translator._translate_text("line1\n\nline3", "dummy-model")
+
+    assert result.split("\n") == ["decoded:LINE1", "", "decoded:LINE3"]
+    assert translated_chunks == ["line1", "line3"]
+
+
+def test_split_text_into_chunks_respects_bounds():
+    text = "Sentence one. Sentence two. Sentence three."
+
+    chunks = translator.split_text_into_chunks(text, max_length=25)
+
+    assert chunks == ["Sentence one.", "Sentence two.", "Sentence three.."]
+    assert all(len(chunk) <= 25 for chunk in chunks)
