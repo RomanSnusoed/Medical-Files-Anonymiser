@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Document Privacy Studio{% endblock %}</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+    <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="brand">
+        <span class="brand-mark">MedFile</span>
+        <span class="brand-mark brand-mark--accent">Anonymiser</span>
+      </div>
+      <nav class="site-nav">
+        <a href="{{ url_for('index') }}" class="nav-link">Start again</a>
+        <a href="#workflow" class="nav-link">Workflow</a>
+        <a href="#features" class="nav-link">Capabilities</a>
+      </nav>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=True) %} {% if
+    messages %}
+    <div class="flash-container">
+      {% for category, message in messages %}
+      <div class="flash-message flash-message--{{ category }}">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %} {% endwith %}
+
+    <main class="page-content">{% block content %}{% endblock %}</main>
+
+    <footer class="site-footer">
+      <p>
+        Built with OCR, multilingual translation, privacy cleaning, PDF
+        highlighting, and AI explanations — all in one streamlined workspace.
+      </p>
+    </footer>
+  </body>
+</html>

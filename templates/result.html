@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Processing summary{% endblock %}
+
+{% block content %}
+<section class="result-intro" id="results" data-animate-on-load>
+  <div class="intro-text">
+    <h1>Your document is sanitised and ready to share.</h1>
+    <p>
+      <strong>{{ file_name }}</strong> processed into {{ final_language_label | lower }} with
+      {{ stats.log_count }} logged redaction events.
+    </p>
+    <div class="status-row">
+      <span class="status-pill">Detected: {{ detected_language_label }}</span>
+      <span class="status-pill">Delivery: {{ target_language_label }}</span>
+      <span class="status-pill status-pill--accent">Final: {{ final_language_label }}</span>
+    </div>
+    {% if detection_error %}
+    <p class="inline-warning">Language detection warning: {{ detection_error }}</p>
+    {% endif %}
+  </div>
+  <div class="intro-actions">
+    {% if pdf_filename %}
+    <a
+      class="primary-button"
+      href="{{ url_for('static', filename='pdf_outputs/' + pdf_filename) }}"
+      download
+    >
+      Download highlighted PDF
+    </a>
+    {% endif %}
+    <a class="secondary-button" href="{{ url_for('index') }}">Process another file</a>
+  </div>
+</section>
+
+<section class="result-details">
+  <div class="translation-log" data-animate-on-load>
+    <h2>Processing journey</h2>
+    <ul>
+      {% for step in translation_steps %}
+      <li>{{ step }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="stats-grid" data-animate-on-load>
+    <article class="stat-card">
+      <span class="stat-value">{{ stats.redaction_count }}</span>
+      <span class="stat-label">Redactions</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-value">{{ stats.log_count }}</span>
+      <span class="stat-label">Log entries</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-value">{{ stats.character_count }}</span>
+      <span class="stat-label">Characters delivered</span>
+    </article>
+  </div>
+</section>
+
+<section class="results-grid">
+  <article class="result-card" data-animate-on-load>
+    <header class="result-card__header">
+      <div>
+        <h3>Extracted text</h3>
+        <p class="result-meta">Raw OCR output from your upload.</p>
+      </div>
+      <button class="ghost-button" type="button" data-copy-target="extracted-text" data-label="Copy">
+        Copy
+      </button>
+    </header>
+    <pre id="extracted-text" class="result-card__content">{{ extracted_text }}</pre>
+  </article>
+
+  <article class="result-card" data-animate-on-load>
+    <header class="result-card__header">
+      <div>
+        <h3>Sanitised text (analysis)</h3>
+        <p class="result-meta">Processed in {{ analysis_language_label | lower }} for redaction.</p>
+      </div>
+      <button class="ghost-button" type="button" data-copy-target="analysis-text" data-label="Copy">
+        Copy
+      </button>
+    </header>
+    <pre id="analysis-text" class="result-card__content">{{ analysis_text }}</pre>
+  </article>
+
+  <article class="result-card result-card--accent" data-animate-on-load>
+    <header class="result-card__header">
+      <div>
+        <h3>Final deliverable</h3>
+        <p class="result-meta">Shared with stakeholders in {{ final_language_label | lower }}.</p>
+      </div>
+      <button class="ghost-button" type="button" data-copy-target="final-text" data-label="Copy">
+        Copy
+      </button>
+    </header>
+    <pre id="final-text" class="result-card__content">{{ final_text }}</pre>
+  </article>
+
+  <article class="result-card" data-animate-on-load>
+    <header class="result-card__header">
+      <div>
+        <h3>Cleaning log</h3>
+        <p class="result-meta">Each detected entity, regex match, and filter explanation.</p>
+      </div>
+      <span class="badge">{{ stats.log_count }} entries</span>
+    </header>
+    <div class="result-card__content result-card__content--scrollable">
+      <ul class="log-list">
+        {% for log in logs %}
+        <li>{{ log }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+
+  <article class="result-card result-card--wide" data-animate-on-load>
+    <header class="result-card__header">
+      <div>
+        <h3>AI explanation</h3>
+        <p class="result-meta">Generate a clinician-style briefing for non-technical recipients.</p>
+      </div>
+    </header>
+    <div class="result-card__content">
+      {% if explanation %}
+      <div class="explanation-output">{{ explanation }}</div>
+      {% else %}
+      <p class="placeholder">No explanation yet — ask the AI assistant for a summary.</p>
+      {% endif %}
+
+      <form action="{{ url_for('generate_explanation_route') }}" method="post" class="explanation-form">
+        <input type="hidden" name="cleaned_text" value="{{ cleaned_text }}" />
+        <input type="hidden" name="analysis_text" value="{{ analysis_text }}" />
+        <input type="hidden" name="extracted_text" value="{{ extracted_text }}" />
+        <input type="hidden" name="final_text" value="{{ final_text }}" />
+        <input type="hidden" name="analysis_language" value="{{ analysis_language }}" />
+        <input type="hidden" name="final_language" value="{{ final_language }}" />
+        <input type="hidden" name="detected_language" value="{{ detected_language }}" />
+        <input type="hidden" name="pdf_filename" value="{{ pdf_filename }}" />
+        <input type="hidden" name="target_language" value="{{ target_language }}" />
+        <input type="hidden" name="detection_error" value="{{ detection_error }}" />
+        <input type="hidden" name="file_name" value="{{ file_name }}" />
+        {% for log in logs %}
+        <input type="hidden" name="logs" value="{{ log }}" />
+        {% endfor %}
+        {% for step in translation_steps %}
+        <input type="hidden" name="translation_steps" value="{{ step }}" />
+        {% endfor %}
+        <button type="submit" class="primary-button">Ask for medical explanation</button>
+      </form>
+    </div>
+  </article>
+</section>
+{% endblock %}
