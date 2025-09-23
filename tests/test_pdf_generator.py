@@ -42,6 +42,7 @@ def test_generate_pdf_with_highlights_creates_incremented_file(tmp_path, monkeyp
     monkeypatch.setattr(pdf_generator.canvas, "Canvas", DummyCanvas)
     monkeypatch.setattr(pdf_generator.colors, "black", "BLACK")
     monkeypatch.setattr(pdf_generator.colors, "red", "RED")
+main
     output_path = pdf_generator.generate_pdf_with_highlights(
         "Original [REDACTED] text",
         "Clean [REDACTED] line\nSecond line without secret",

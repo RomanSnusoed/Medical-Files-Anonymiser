@@ -110,78 +110,6 @@ textarea {
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.25s ease;
-}
-
-.nav-link:hover::after,
-.nav-link:focus-visible::after {
-  transform: scaleX(1);
-}
-
-.flash-container {
-  width: min(960px, 92vw);
-  margin: 1rem auto 0;
-  display: grid;
-  gap: 0.75rem;
-}
-
-.flash-message {
-  padding: 0.85rem 1.1rem;
-  border-radius: var(--radius-small);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(12px);
-}
-
-.flash-message--error {
-  border-color: rgba(239, 68, 68, 0.35);
-  color: #fee2e2;
-}
-
-.flash-message--success {
-  border-color: rgba(16, 185, 129, 0.35);
-  color: #d1fae5;
-}
-
-.page-content {
-  width: min(1200px, 92vw);
-  margin: 0 auto;
-  padding: clamp(2rem, 4vw, 4rem) 0 5rem;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(3rem, 5vw, 5rem);
-}
-
-.hero {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  align-items: center;
-  gap: clamp(2rem, 5vw, 4rem);
-}
-
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.28em;
-  font-size: 0.75rem;
-  color: rgba(226, 232, 240, 0.72);
-  margin-bottom: 1.2rem;
-}
-
-.hero__lead {
-  margin: 1.5rem 0 2.5rem;
-  color: rgba(226, 232, 240, 0.86);
-  font-size: 1.05rem;
-}
-
-.hero__cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.hero__preview {
-  display: grid;
-  gap: 1.5rem;
-}
 
 .preview-card {
   padding: 1.5rem;
@@ -272,39 +200,7 @@ textarea {
 
 .dropzone-content strong {
   font-size: 1.2rem;
-}
-
-.dropzone-content small {
-  color: rgba(148, 163, 184, 0.9);
-}
-
-.form-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  align-items: center;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  color: rgba(226, 232, 240, 0.82);
-  font-size: 0.95rem;
-}
-
-.form-label {
-  font-weight: 600;
-}
-
-.form-select {
-  border-radius: var(--radius-small);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.6);
-  color: inherit;
-  padding: 0.75rem 1rem;
-}
-
+ main
 .checkbox {
   flex-direction: row;
   align-items: center;
@@ -364,12 +260,7 @@ textarea {
   color: white;
   padding: 0.55rem 1.1rem;
   font-size: 0.85rem;
-}
-
-.ghost-button.is-copied {
-  background: rgba(16, 185, 129, 0.22);
-}
-
+ main
 .workflow h2,
 .features h2 {
   text-align: center;
@@ -377,14 +268,7 @@ textarea {
   margin-bottom: 2rem;
 }
 
-.features__intro {
-  max-width: 60ch;
-  margin: 0 auto 2.5rem;
-  text-align: center;
-  color: rgba(203, 213, 225, 0.9);
-  line-height: 1.6;
-}
-
+ main
 .workflow-steps {
   display: grid;
   gap: 1.5rem;
@@ -506,45 +390,7 @@ textarea {
 
 .stat-label {
   color: rgba(148, 163, 184, 0.9);
-  font-size: 0.9rem;
-}
-
-.results-grid {
-  display: grid;
-  gap: 1.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-}
-
-.result-card {
-  background: var(--surface);
-  border-radius: var(--radius-medium);
-  padding: 1.6rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(24px);
-}
-
-.result-card--accent {
-  background: rgba(99, 102, 241, 0.18);
-  border: 1px solid rgba(99, 102, 241, 0.35);
-}
-
-.result-card--wide {
-  grid-column: 1 / -1;
-}
-
-.result-card__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.result-meta {
-  color: rgba(148, 163, 184, 0.9);
-  font-size: 0.9rem;
+ main
   margin-top: 0.35rem;
 }
 
