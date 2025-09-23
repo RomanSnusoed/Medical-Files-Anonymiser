@@ -1,59 +1,83 @@
-Medical Document Anonymizer
-.
+# 🏥 Medical Document Anonymizer
 
-Features
-Multi-format Extraction:
-Extracts text from PDFs, DOCX, and images (JPG, PNG, ) using OCR and text parsing.
+A tool for anonymizing and simplifying medical documents.  
+Supports text extraction, translation, sensitive data removal, and generation of user-friendly PDF reports.
 
-Automatic Language Detection:
-Detects the language of the document (supports English, German, Russian).
+---
 
-Translation:
-Seamlessly translates documents between English, German, and Russian using state-of-the-art neural models.
+## ✨ Features
 
-Anonymization:
-Removes personal and sensitive information using a combination of:
+### 📂 Multi-format Extraction
+- Extract text from:
+  - **PDF**
+  - **DOCX**
+  - **Images** (JPG, PNG) via OCR
 
-Microsoft Presidio (PII detection)
-XLM-RoBERTa NER (Named Entity Recognition)
-Custom regex patterns
-PDF Generation with Highlights:
-Generates a new PDF with all redacted information clearly highlighted.
+### 🌐 Automatic Language Detection
+- Detects document language  
+- Supported: **English, German, Russian**
 
-Medical Explanation (ChatGPT):
-Optionally sends cleaned text to ChatGPT for a plain-language explanation of medical findings.
+### 🔄 Translation
+- Translate documents between:
+  - **English ↔ German ↔ Russian**
+- Powered by state-of-the-art neural models
 
-Web Interface:
-User-friendly Flask web app for uploading files and viewing results.
+### 🔒 Anonymization
+Removes personal and sensitive data using a combination of:
+- **Microsoft Presidio** (PII detection)
+- **XLM-RoBERTa NER** (Named Entity Recognition)
+- **Custom Regex Patterns**
 
-How It Works
-Upload a File:
-Upload your medical document via the web interface.
+### 📑 PDF Generation with Highlights
+- Generates a new PDF  
+- All redacted data is **highlighted** for clarity
 
-Text Extraction:
-The system extracts text using OCR (for images/PDFs) or direct parsing (for DOCX).
+### 🧾 Medical Explanation (ChatGPT)
+- Optional plain-language explanation of medical findings  
+- Powered by **ChatGPT**
 
-Language Detection & Translation:
-The language is detected and, if needed, the text is translated to English for processing.
+### 🌐 Web Interface
+- User-friendly **Flask web app**  
+- Upload files and view results directly in your browser
 
-Anonymization:
-All personal data (names, dates, emails, phone numbers, IDs, etc.) is detected and replaced with [REDACTED].
+---
 
-Cleaning & Logging:
-The cleaning process is logged for transparency.
+## ⚙️ How It Works
 
-PDF Generation:
-A new PDF is generated with all redacted sections highlighted.
+1. **Upload a File**  
+   Upload your medical document via the web interface.
 
-Medical Explanation
-Users can request a plain-language explanation of the medical findings via ChatGPT.
+2. **Text Extraction**  
+   - OCR for images/PDF  
+   - Direct parsing for DOCX
 
-Technologies Used
-Python 3
-Flask (web framework)
-pytesseract (OCR) https://sourceforge.net/projects/tesseract-ocr.mirror/
-transformers (HuggingFace MarianMT, XLM-RoBERTa)
-Microsoft Presidio (PII detection)
-reportlab (PDF generation)
-langdetect (language detection)
-OpenAI GPT (medical explanations)
+3. **Language Detection & Translation**  
+   - Detects language  
+   - Translates to **English** for processing (if needed)
+
+4. **Anonymization**  
+   - Detects and replaces personal data (names, dates, emails, phone numbers, IDs, etc.) with `[REDACTED]`.
+
+5. **Cleaning & Logging**  
+   - Every cleaning step is **logged** for transparency.
+
+6. **PDF Generation**  
+   - Creates a new PDF with all **redacted sections highlighted**.
+
+7. **Medical Explanation (optional)**  
+   - Get a plain-language summary of medical findings.
+
+---
+
+## 🛠️ Technologies Used
+
+- **Python 3**
+- **Flask** — web framework
+- **pytesseract** — OCR ([Tesseract](https://sourceforge.net/projects/tesseract-ocr.mirror/))
+- **transformers** — HuggingFace MarianMT, XLM-RoBERTa
+- **Microsoft Presidio** — PII detection
+- **reportlab** — PDF generation
+- **langdetect** — language detection
+- **OpenAI GPT** — medical explanations
+
+---
