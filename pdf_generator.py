@@ -44,3 +44,5 @@ def generate_pdf_with_highlights(original_text, cleaned_text, output_folder="pdf
 
     c.save()
     print(f"PDF saved at: {output_path}")
+
+    return output_path
