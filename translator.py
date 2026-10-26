@@ -85,7 +85,7 @@ def translate_preserving_markers(text: str, source: str, target: str) -> str:
     model_name = MODELS.get((source, target))
     if model_name is None:
         raise ValueError(f"Unsupported translation pair: {source} -> {target}")
-    pieces = re.split(r"(\\[REDACTED\\])", text)
+    pieces = re.split(r"(\[REDACTED\])", text)
     return "".join(
         piece if piece == MARKER or not piece.strip() else _translate_text(piece, model_name)
         for piece in pieces
