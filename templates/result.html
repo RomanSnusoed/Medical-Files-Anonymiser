@@ -5,11 +5,12 @@
 {% block content %}
 <section class="result-intro" id="results" data-animate-on-load>
   <div class="intro-text">
-    <h1>Your document is sanitised and ready to share.</h1>
+    <h1>Best-effort redaction results — manual review required.</h1>
     <p>
       <strong>{{ file_name }}</strong> processed into {{ final_language_label | lower }} with
       {{ stats.log_count }} logged redaction events.
     </p>
+    <p class="inline-warning" role="alert">This prototype does not guarantee anonymity. Use synthetic data only; review all outputs before sharing.</p>
     <div class="status-row">
       <span class="status-pill">Detected: {{ detected_language_label }}</span>
       <span class="status-pill">Delivery: {{ target_language_label }}</span>
@@ -23,10 +24,10 @@
     {% if pdf_filename %}
     <a
       class="primary-button"
-      href="{{ url_for('static', filename='pdf_outputs/' + pdf_filename) }}"
+      href="{{ url_for('download_pdf', token=token) }}"
       download
     >
-      Download highlighted PDF
+      Download text-only redacted PDF
     </a>
     {% endif %}
     <a class="secondary-button" href="{{ url_for('index') }}">Process another file</a>
@@ -59,10 +60,11 @@
 </section>
 
 <section class="results-grid">
+  {% if extracted_text %}
   <article class="result-card" data-animate-on-load>
     <header class="result-card__header">
       <div>
-        <h3>Extracted text</h3>
+        <h3>Source text (local debug only)</h3>
         <p class="result-meta">Raw OCR output from your upload.</p>
       </div>
       <button class="ghost-button" type="button" data-copy-target="extracted-text" data-label="Copy">
@@ -71,6 +73,7 @@
     </header>
     <pre id="extracted-text" class="result-card__content">{{ extracted_text }}</pre>
   </article>
+  {% endif %}
 
   <article class="result-card" data-animate-on-load>
     <header class="result-card__header">
@@ -119,10 +122,11 @@
     <header class="result-card__header">
       <div>
         <h3>AI explanation</h3>
-        <p class="result-meta">Generate a clinician-style briefing for non-technical recipients.</p>
+        <p class="result-meta">Optional API request for synthetic data only; may be inaccurate.</p>
       </div>
     </header>
     <div class="result-card__content">
+      <p>External API requests are disabled by default and require explicit consent. Never send real patient records.</p>
       {% if explanation %}
       <div class="explanation-output">{{ explanation }}</div>
       {% else %}
@@ -130,24 +134,13 @@
       {% endif %}
 
       <form action="{{ url_for('generate_explanation_route') }}" method="post" class="explanation-form">
-        <input type="hidden" name="cleaned_text" value="{{ cleaned_text }}" />
-        <input type="hidden" name="analysis_text" value="{{ analysis_text }}" />
-        <input type="hidden" name="extracted_text" value="{{ extracted_text }}" />
-        <input type="hidden" name="final_text" value="{{ final_text }}" />
-        <input type="hidden" name="analysis_language" value="{{ analysis_language }}" />
-        <input type="hidden" name="final_language" value="{{ final_language }}" />
-        <input type="hidden" name="detected_language" value="{{ detected_language }}" />
-        <input type="hidden" name="pdf_filename" value="{{ pdf_filename }}" />
-        <input type="hidden" name="target_language" value="{{ target_language }}" />
-        <input type="hidden" name="detection_error" value="{{ detection_error }}" />
-        <input type="hidden" name="file_name" value="{{ file_name }}" />
-        {% for log in logs %}
-        <input type="hidden" name="logs" value="{{ log }}" />
-        {% endfor %}
-        {% for step in translation_steps %}
-        <input type="hidden" name="translation_steps" value="{{ step }}" />
-        {% endfor %}
-        <button type="submit" class="primary-button">Ask for medical explanation</button>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <input type="hidden" name="job_token" value="{{ token }}" />
+        <label class="form-field checkbox">
+          <input type="checkbox" name="external_api_consent" value="yes" required />
+          <span>I confirm this is synthetic data and consent to sending the processed text to an external API.</span>
+        </label>
+        <button type="submit" class="primary-button">Ask for optional explanation</button>
       </form>
     </div>
   </article>
