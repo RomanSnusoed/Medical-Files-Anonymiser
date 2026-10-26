@@ -1,0 +1,17 @@
+[
+  {
+    "language": "en",
+    "text": "Contact: demo.patient@example.invalid. Patient ID: ZZ-4829.",
+    "sensitive_strings": ["demo.patient@example.invalid", "ZZ-4829"]
+  },
+  {
+    "language": "en",
+    "text": "Patient File: ZZ-ABC-12345. Please email test.doctor@example.invalid.",
+    "sensitive_strings": ["ZZ-ABC-12345", "test.doctor@example.invalid"]
+  },
+  {
+    "language": "en",
+    "text": "Dr Amelia Riverstone visited the clinic. Contact 555-124-6789.",
+    "sensitive_strings": ["Amelia Riverstone", "555-124-6789"]
+  }
+]

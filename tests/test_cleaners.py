@@ -1,102 +1,68 @@
 from __future__ import annotations
 
-from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+import cleaners
 
 
-def test_load_ignore_words_returns_set(cleaners_module):
-    ignorewords = cleaners_module.load_ignore_words(Path("ignorewords.txt"))
-    assert isinstance(ignorewords, set)
-    assert "Alanine" in ignorewords
-    assert "Alison" not in ignorewords
+@pytest.mark.parametrize("spans,expected", [
+    ([(0, 5, "[REDACTED]"), (0, 5, "[REDACTED]")], "[REDACTED] Smith"),
+    ([(0, 11, "[REDACTED]"), (0, 5, "[REDACTED]")], "[REDACTED]"),
+    ([(0, 5, "[REDACTED]"), (3, 11, "[REDACTED]")], "[REDACTED]"),
+])
+def test_merge_overlaps(spans, expected):
+    assert cleaners.apply_replacements("Alice Smith", spans) == expected
 
 
-def test_is_valid_date_format_accepts_various_patterns(cleaners_module):
-    assert cleaners_module.is_valid_date_format("Date of Birth: 01/02/2003")
-    assert cleaners_module.is_valid_date_format("1 January 2020")
-    assert cleaners_module.is_valid_date_format("Patient ID: AB-1234") is False
+def test_unrelated_spans_preserve_text():
+    assert cleaners.apply_replacements(
+        "Alice met Bob", [(0, 5, "[REDACTED]"), (10, 13, "[REDACTED]")]
+    ) == "[REDACTED] met [REDACTED]"
 
 
-def test_clean_and_remove_personal_info_redacts_all_sources(
-    cleaners_module, analyzer_mock, ner_pipeline_mock_fixture, monkeypatch
-):
-    text = "My name is Quasar and I live in New York. Call me at 555-1234."
-
-    FakeResult = type("FakeResult", (), {})
-    fake_person = FakeResult()
-    fake_person.start = text.index("Quasar")
-    fake_person.end = fake_person.start + len("Quasar")
-    fake_person.entity_type = "PERSON"
-
-    analyzer_mock.analyze.return_value = [fake_person]
-    ner_pipeline_mock_fixture.return_value = [
-        {
-            "start": text.index("New York"),
-            "end": text.index("New York") + len("New York"),
-            "entity_group": "LOCATION",
-        }
-    ]
-
-    monkeypatch.setattr(cleaners_module, "detect", lambda *_: "en")
-
-    cleaned, logs = cleaners_module.clean_and_remove_personal_info(text)
-
-    assert "Quasar" not in cleaned
-    assert "New York" not in cleaned
-    assert "[REDACTED]" in cleaned
-    assert any("Removing" in entry for entry in logs)
+def test_empty_and_invalid_spans():
+    assert cleaners.apply_replacements("abc", [(4, 5, "[REDACTED]"), (-1, 2, "[REDACTED]")]) == "abc"
+    assert cleaners.process_text_in_chunks("") == ("", [])
 
 
-def test_clean_and_remove_personal_info_handles_presidio_error(
-    cleaners_module, analyzer_mock, monkeypatch
-):
-    analyzer_mock.analyze.side_effect = RuntimeError("boom")
-    monkeypatch.setattr(cleaners_module, "detect", lambda *_: "en")
-
-    cleaned, logs = cleaners_module.clean_and_remove_personal_info("Nothing personal")
-
-    assert cleaned == "Nothing personal"
-    assert any("Presidio error" in entry for entry in logs)
-
-
-def test_clean_and_remove_personal_info_regex_redacts(
-    cleaners_module, ner_pipeline_mock_fixture, monkeypatch
-):
-    monkeypatch.setattr(cleaners_module, "detect", lambda *_: "en")
-    ner_pipeline_mock_fixture.return_value = []
-
-    text = "Contact: roman@example.com"
-    cleaned, logs = cleaners_module.clean_and_remove_personal_info(text)
-
-    assert "roman@example.com" not in cleaned
-    assert cleaned.count("[REDACTED]") == 1
-    assert any("email" in entry for entry in logs)
+def test_detectors_and_regex(monkeypatch):
+    text = "Alice visited Berlin. Email alice@example.com"
+    a = MagicMock()
+    a.analyze.return_value = [SimpleNamespace(start=0, end=5, entity_type="PERSON")]
+    n = MagicMock(return_value=[{"start": 14, "end": 20, "entity_group": "LOC"}])
+    monkeypatch.setattr(cleaners, "_get_analyzer", lambda: a)
+    monkeypatch.setattr(cleaners, "_get_ner_pipeline", lambda: n)
+    result, logs = cleaners.process_text_in_chunks(text, include_pii=False)
+    assert "Alice" not in result
+    assert "Berlin" not in result
+    assert "alice@example.com" not in result
+    assert all("alice@example.com" not in line for line in logs)
+    assert result.count("[REDACTED]") == 3
 
 
-def test_process_text_in_chunks_preserves_order(cleaners_module, monkeypatch):
-    calls = []
-
-    def fake_clean(text):
-        calls.append(text)
-        return text.upper(), [f"processed {text}"]
-
-    monkeypatch.setattr(cleaners_module, "clean_and_remove_personal_info", fake_clean)
-
-    cleaned, logs = cleaners_module.process_text_in_chunks("aa bb", chunk_size=2)
-
-    assert cleaned == "AA BB"
-    assert calls == ["aa", " b", "b"]
-    assert len(logs) == len(calls)
+def test_model_failure_aborts(monkeypatch):
+    a = MagicMock()
+    a.analyze.side_effect = RuntimeError("model unavailable")
+    monkeypatch.setattr(cleaners, "_get_analyzer", lambda: a)
+    monkeypatch.setattr(cleaners, "_get_ner_pipeline", lambda: lambda s: [])
+    with pytest.raises(cleaners.AnonymizationError):
+        cleaners.process_text_in_chunks("Alice visited Berlin.")
 
 
-def test_load_ignore_words_missing_file(cleaners_module, tmp_path, monkeypatch):
-    missing_file = tmp_path / "missing.txt"
-    mock_print = MagicMock()
-    monkeypatch.setattr("builtins.print", mock_print)
+def test_ignore_words_missing_file(tmp_path):
+    assert cleaners.load_ignore_words(tmp_path / "missing.txt") == set()
 
-    ignorewords = cleaners_module.load_ignore_words(missing_file)
 
-    assert ignorewords == set()
-    mock_print.assert_called_once()
+def test_chunk_overlaps_are_valid():
+    windows = list(cleaners._windows("a" * 300, 120, 20))
+    assert windows[0][0] == 0
+    assert windows[-1][1] == 300
+    assert all(start < end for start, end, _ in windows)
+
+
+def test_dates_and_ages():
+    assert cleaners.is_valid_date_format("2003-02-01")
+    assert cleaners.is_valid_date_format("29 years old")
+    assert not cleaners.is_valid_date_format("patient is stable")

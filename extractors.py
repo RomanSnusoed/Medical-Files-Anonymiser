@@ -1,79 +1,49 @@
+"""File extraction. All processing occurs in memory where feasible."""
+from __future__ import annotations
+
+from pathlib import Path
+
 import fitz
 import pytesseract
-from PIL import Image
-import docx
-import io
-import os
+from docx import Document
+from PIL import Image, ImageOps
 
-from utils import ensure_tesseract_cmd, preprocess_image, correct_image_orientation
+from utils import ensure_tesseract_cmd, preprocess_image
 
 
-def extract_text_from_image(image_path):
-    """
-    Extracts text from an image file using OCR.
-    """
+def extract_text_from_image(image_path: str | Path) -> str:
     ensure_tesseract_cmd()
-
-    try:
-        img = preprocess_image(image_path)
-        custom_config = r'--oem 3 --psm 6'
-        text = pytesseract.image_to_string(img, config=custom_config)
-        return text.strip()
-    except Exception as e:
-        print(f"Error extracting text from image: {e}")
-        return ""
+    image = preprocess_image(image_path)
+    return pytesseract.image_to_string(image, config="--oem 3 --psm 6").strip()
 
 
-def extract_text_from_pdf(pdf_path):
-    """
-    Extracts text from a PDF file. If no text is found, extracts text from images in the PDF.
-    """
-    text = ""
-    try:
-        pdf_document = fitz.open(pdf_path)
-        for page_number in range(len(pdf_document)):
-            page = pdf_document[page_number]
-            page_text = page.get_text()
-            if page_text.strip():
-                text += page_text + "\n"
-        if text.strip():
-            return text
-    except Exception as e:
-        print(f"Error extracting text from PDF: {e}")
-        pdf_document = None
-
-    # If no text found, extract from images
-    if pdf_document:
-        print("Text not found in PDF, extracting images...")
-        os.makedirs("processed_images", exist_ok=True)
-        ensure_tesseract_cmd()
-        for page_number in range(len(pdf_document)):
-            page = pdf_document[page_number]
-            images = page.get_images(full=True)
-            for img_index, img in enumerate(images):
-                xref = img[0]
-                base_image = pdf_document.extract_image(xref)
-                image_bytes = base_image["image"]
-                image = Image.open(io.BytesIO(image_bytes))
-                image = correct_image_orientation(image)
-                image_path = f"processed_images/page_{page_number + 1}_image_{img_index + 1}.jpg"
-                image.save(image_path, "JPEG")
-                print(f"Image saved as {image_path}")
-                text += pytesseract.image_to_string(image) + "\n"
-    return text
+def extract_text_from_pdf(pdf_path: str | Path) -> str:
+    """OCR each page with no readable text; do not persist embedded images."""
+    texts = []
+    with fitz.open(pdf_path) as document:
+        if document.needs_pass:
+            raise ValueError("Password-protected PDFs are not supported")
+        if len(document) > 50:
+            raise ValueError("PDF exceeds 50-page limit")
+        for page in document:
+            text = page.get_text("text")
+            if not text.strip():
+                ensure_tesseract_cmd()
+                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+                image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                text = pytesseract.image_to_string(ImageOps.grayscale(image), config="--psm 3")
+            texts.append(text)
+    return "\n".join(texts)
 
 
-def extract_text_from_docx(docx_path):
-    """
-    Extracts text from a DOCX file.
-    """
-    try:
-        doc = docx.Document(docx_path)
-        text = ""
-        for paragraph in doc.paragraphs:
-            text += paragraph.text + "\n"
-        return text
-    except Exception as e:
-        print(f"Error extracting text from docx: {e}")
-        return ""
-        
+def extract_text_from_docx(docx_path: str | Path) -> str:
+    """Include paragraphs, table cells, headers and footers."""
+    doc = Document(docx_path)
+    paragraphs = [p.text for p in doc.paragraphs]
+    for table in doc.tables:
+        for row in table.rows:
+            paragraphs.append(" | ".join(cell.text for cell in row.cells))
+    for section in doc.sections:
+        paragraphs.extend(p.text for p in section.header.paragraphs)
+        paragraphs.extend(p.text for p in section.footer.paragraphs)
+    return "\n".join(part for part in paragraphs if part.strip())

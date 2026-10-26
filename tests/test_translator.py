@@ -1,82 +1,81 @@
-from collections import defaultdict
-from unittest.mock import MagicMock, patch
+from __future__ import annotations
 
+import sys
+import types
+from contextlib import nullcontext
+from unittest.mock import Mock
+
+import pytest
 import translator
 
 
-def _fake_tokenizer(model_name):
-    tokenizer = MagicMock(name=f"tokenizer-{model_name}")
-    tokenizer.return_value = {"input_ids": [[0]], "attention_mask": [[1]]}
-    tokenizer.decode.return_value = f"translated-{model_name}"
-    return tokenizer
+class FakeTokenizer:
+    def encode(self, text, add_special_tokens=False):
+        return list(text)
+
+    def prepare_for_model(self, ids, **kwargs):
+        return {"input_ids": ids}
+
+    def decode(self, ids, skip_special_tokens=True):
+        return "".join(ids)
 
 
-def _fake_model(model_name):
-    model = MagicMock(name=f"model-{model_name}")
-    model.generate.return_value = [[0]]
-    return model
+class FakeModel:
+    def eval(self):
+        return self
+
+    def generate(self, input_ids):
+        return [input_ids]
 
 
-def test_models_are_loaded_once_per_language():
+def test_no_silent_truncation_and_preserve_newlines(monkeypatch):
+    monkeypatch.setitem(sys.modules, "torch", types.SimpleNamespace(inference_mode=nullcontext))
+    monkeypatch.setattr(
+        translator, "_get_model_and_tokenizer", lambda name: (FakeModel(), FakeTokenizer())
+    )
+    original = "a" * 120 + "\n\n" + "b" * 120
+    assert translator._translate_text(original, "example", max_length=20).replace(" ", "") == original
+
+
+def test_redaction_placeholders_never_reach_model(monkeypatch):
+    inputs = []
+
+    def fake_translate(text, name, max_length=500):
+        inputs.append(text)
+        return text.upper()
+
+    monkeypatch.setattr(translator, "_translate_text", fake_translate)
+    result = translator.translate_preserving_markers(
+        "hello [REDACTED] world [REDACTED]", "en", "de"
+    )
+    assert result == "HELLO [REDACTED] WORLD [REDACTED]"
+    assert all("[REDACTED]" not in part for part in inputs)
+
+
+def test_same_language_skips_translation(monkeypatch):
+    monkeypatch.setattr(
+        translator, "_translate_text", lambda *a, **kw: pytest.fail("unnecessary translation")
+    )
+    assert translator.translate_preserving_markers("Hi [REDACTED]", "en", "en") == "Hi [REDACTED]"
+
+
+def test_invalid_pair_raises():
+    with pytest.raises(ValueError):
+        translator.translate_preserving_markers("test", "en", "es")
+
+
+def test_model_loading_is_cached(monkeypatch):
+    fake_transformers = types.ModuleType("transformers")
+    factory = Mock(side_effect=lambda _name: FakeTokenizer())
+    model_factory = Mock(side_effect=lambda _name: FakeModel())
+    fake_transformers.MarianTokenizer = types.SimpleNamespace(from_pretrained=factory)
+    fake_transformers.MarianMTModel = types.SimpleNamespace(from_pretrained=model_factory)
+    monkeypatch.setitem(sys.modules, "transformers", fake_transformers)
     translator._get_model_and_tokenizer.cache_clear()
-    load_counts = defaultdict(int)
-
-    def model_loader(model_name):
-        load_counts[model_name] += 1
-        return _fake_model(model_name)
-
-    with patch("translator.MarianMTModel.from_pretrained", side_effect=model_loader) as model_patch, \
-            patch("translator.MarianTokenizer.from_pretrained", side_effect=_fake_tokenizer):
-        translator.translate_text_de_to_en("Hallo")
-        translator.translate_text_de_to_en("Wie geht's?")
-        translator.translate_text_en_to_de("Hello")
-        translator.translate_text_en_to_de("Good morning")
-        translator.translate_text_ru_to_en("Привет")
-        translator.translate_text_ru_to_en("Здравствуйте")
-        translator.translate_text_en_to_ru("Hi")
-        translator.translate_text_en_to_ru("Welcome")
-
     try:
-        assert model_patch.call_count == 4
-        assert load_counts["Helsinki-NLP/opus-mt-de-en"] == 1
-        assert load_counts["Helsinki-NLP/opus-mt-en-de"] == 1
-        assert load_counts["Helsinki-NLP/opus-mt-ru-en"] == 1
-        assert load_counts["Helsinki-NLP/opus-mt-en-ru"] == 1
+        first = translator._get_model_and_tokenizer("mock-model")
+        assert first is translator._get_model_and_tokenizer("mock-model")
+        assert factory.call_count == 1
+        assert model_factory.call_count == 1
     finally:
         translator._get_model_and_tokenizer.cache_clear()
-
-
-def test_translate_text_preserves_blank_lines(monkeypatch):
-    translated_chunks = []
-
-    class DummyTokenizer:
-        def __call__(self, text, **kwargs):
-            return {"text": text}
-
-        def decode(self, token, skip_special_tokens=True):
-            return f"decoded:{token}"
-
-    class DummyModel:
-        def generate(self, **kwargs):
-            translated_chunks.append(kwargs["text"])
-            return [kwargs["text"].upper()]
-
-    monkeypatch.setattr(
-        translator,
-        "_get_model_and_tokenizer",
-        lambda name: (DummyModel(), DummyTokenizer()),
-    )
-
-    result = translator._translate_text("line1\n\nline3", "dummy-model")
-
-    assert result.split("\n") == ["decoded:LINE1", "", "decoded:LINE3"]
-    assert translated_chunks == ["line1", "line3"]
-
-
-def test_split_text_into_chunks_respects_bounds():
-    text = "Sentence one. Sentence two. Sentence three."
-
-    chunks = translator.split_text_into_chunks(text, max_length=25)
-
-    assert chunks == ["Sentence one.", "Sentence two.", "Sentence three.."]
-    assert all(len(chunk) <= 25 for chunk in chunks)
