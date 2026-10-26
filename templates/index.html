@@ -2,14 +2,14 @@
 {% block content %}
 <section class="hero" id="top">
   <div class="hero__content" data-animate-on-load>
-    <p class="eyebrow">End-to-end medical document workspace</p>
+    <p class="eyebrow">Portfolio demonstration · OCR · PII detection</p>
     <h1>Explore a best-effort medical document redaction pipeline.</h1>
     <p class="inline-warning" role="alert">Demo only: Use synthetic documents. Automated PII detection is not guaranteed. Never upload real patient records.</p>
     <p class="hero__lead">
-      Upload PDFs, DOCX files, or scanned images. We will extract the text with
-      OCR, redact protected health information, translate across English,
-      German, and Russian, and prepare a highlighted PDF alongside an
-      AI-generated explanation.
+      Upload PDFs, DOCX files, or scanned images. The prototype extracts text using
+      OCR, attempts to redact personal information, translates across English,
+      German, and Russian, and prepares a reconstructed PDF with an
+      optional explanation for synthetic data.
     </p>
     <div class="hero__cta">
       <a class="primary-button" href="#upload">Begin with your document</a>
@@ -29,7 +29,7 @@
     <div class="preview-card preview-card--accent">
       <h3>Supported uploads</h3>
       <p class="preview-note">PDF, DOCX, JPG, PNG, TIFF up to 15&nbsp;MB</p>
-      <p class="preview-note">Highlights ready for board presentations</p>
+      <p class="preview-note">Not validated for clinical or compliance use</p>
     </div>
   </div>
 </section>
@@ -76,22 +76,21 @@
     </div>
 
     <button type="submit" class="primary-button primary-button--wide">
-      Sanitise &amp; analyse document
+      Process synthetic document
     </button>
   </form>
 </section>
 
 <section class="workflow" id="workflow">
   <h2 data-animate-on-load>
-    Everything your compliance review needs in one pass
+    A testable document-processing pipeline
   </h2>
   <div class="workflow-steps">
     <article class="step-card" data-animate-on-load>
       <h3>1. Extract &amp; digitise</h3>
       <p>
-        OCR every page with adaptive preprocessing to enhance contrast, fix
-        orientation, and recover text from scans that would normally fail
-        automated checks.
+        Extract text from PDF pages and apply OCR to image-only pages;
+        scanned output requires human review.
       </p>
     </article>
     <article class="step-card" data-animate-on-load>
@@ -106,15 +105,15 @@
       <p>
         Combine Presidio, multilingual transformers, and regex sweeps to redact
         names, emails, patient identifiers, and contextual clues across the
-        entire document.
+        document, with known false-negative and false-positive risks.
       </p>
     </article>
     <article class="step-card" data-animate-on-load>
       <h3>4. Re-translate &amp; package</h3>
       <p>
         Deliver the sanitised result in your chosen language, produce a
-        highlighted PDF for audit trails, and optionally request an AI-generated
-        medical explanation.
+        text-only PDF for manual review, and optionally request an external
+        explanation with explicit consent.
       </p>
     </article>
   </div>
@@ -124,31 +123,31 @@
   <h2 data-animate-on-load>Why MedFileAnonymiser?</h2>
   <div class="feature-grid">
     <div class="feature-card" data-animate-on-load>
-      <h3>High-fidelity OCR</h3>
+      <h3>OCR text recovery</h3>
       <p>
-        Upscales, denoises, and deskews scans before running Tesseract for
-        reliable character recognition.
+        Preprocesses images before running Tesseract; accuracy depends
+        on scan quality, rotation, and layout.
       </p>
     </div>
     <div class="feature-card" data-animate-on-load>
       <h3>Multilingual intelligence</h3>
       <p>
-        Translate between English, German, and Russian in either direction to
-        keep global teams aligned.
+        Translate between English, German, and Russian while preserving
+        redaction placeholders.
       </p>
     </div>
     <div class="feature-card" data-animate-on-load>
       <h3>Explainable AI</h3>
       <p>
-        Request a clinician-style narrative that summarises key findings after
-        redaction.
+        Request an optional explanation for synthetic medical text, with
+        external API access disabled by default.
       </p>
     </div>
     <div class="feature-card" data-animate-on-load>
-      <h3>Audit-ready output</h3>
+      <h3>Reviewable text-only export</h3>
       <p>
-        Download a PDF with colour-coded redactions plus a full log of every
-        removal and regex match.
+        Download a reconstructed PDF with colored redaction markers;
+        logs contain masked entity offsets by default.
       </p>
     </div>
   </div>
