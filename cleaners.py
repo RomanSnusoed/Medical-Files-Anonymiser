@@ -4,7 +4,6 @@ Treat this as a best-effort detection system, not a guarantee of anonymisation.
 """
 from __future__ import annotations
 
-import os
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -136,6 +135,7 @@ def process_text_in_chunks(
     overlap: int = DEFAULT_OVERLAP,
     *,
     include_pii: bool = False,
+    language: str = "en",
 ) -> tuple[str, list[str]]:
     """Redact text with overlapping windows, retaining original absolute offsets.
 
@@ -144,13 +144,15 @@ def process_text_in_chunks(
     """
     if not text:
         return "", []
+    if language not in {"en", "de", "ru"}:
+        raise ValueError("Unsupported detection language")
     if overlap >= chunk_size // 2:
         overlap = max(0, chunk_size // 4)
     if chunk_size < 2:
         raise ValueError("chunk_size must be at least 2")
 
     try:
-        analyzer = _get_analyzer()
+        analyzer = _get_analyzer() if language == "en" else None
         ner = _get_ner_pipeline()
     except Exception as exc:
         raise AnonymizationError("Could not initialize PII detection models") from exc
@@ -159,10 +161,13 @@ def process_text_in_chunks(
     logs: list[str] = []
     try:
         for offset, _end, window in _windows(text, chunk_size, overlap):
-            presidio_results = analyzer.analyze(
-                text=window,
-                language="en",
-                entities=["PERSON", "LOCATION", "EMAIL_ADDRESS", "PHONE_NUMBER", "DATE_TIME"],
+            presidio_results = (
+                analyzer.analyze(
+                    text=window,
+                    language="en",
+                    entities=["PERSON", "LOCATION", "EMAIL_ADDRESS", "PHONE_NUMBER", "DATE_TIME"],
+                )
+                if analyzer is not None else []
             )
             for entity in presidio_results:
                 start, end = int(entity.start), int(entity.end)
@@ -204,6 +209,6 @@ def process_text_in_chunks(
     return apply_replacements(text, merged), logs
 
 
-def clean_and_remove_personal_info(text: str, *, include_pii: bool = False):
+def clean_and_remove_personal_info(text: str, *, include_pii: bool = False, language: str = "en"):
     """Compatibility entry point for existing callers."""
-    return process_text_in_chunks(text, include_pii=include_pii)
+    return process_text_in_chunks(text, include_pii=include_pii, language=language)
