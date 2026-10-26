@@ -121,7 +121,9 @@ def _windows(text: str, chunk_size: int, overlap: int):
 
 
 def _should_redact(value: str) -> bool:
-    return bool(value.strip()) and value.strip().casefold() not in ignorewords
+    # Never trust an ignore-word list to override an explicit PII detection.
+    # Common person names and cities may appear in broad dictionaries.
+    return bool(value.strip())
 
 
 def _log(source: str, label: str, start: int, end: int, value: str, include_pii: bool) -> str:
