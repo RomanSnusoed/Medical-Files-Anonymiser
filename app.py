@@ -130,7 +130,9 @@ def _validate_file(path: Path, extension: str) -> None:
     if path.stat().st_size == 0:
         raise ProcessingError("The uploaded file is empty.")
     if extension == "pdf":
-        if not path.read_bytes()[:5] == b"%PDF-":
+        with path.open("rb") as handle:
+            signature = handle.read(5)
+        if signature != b"%PDF-":
             raise ProcessingError("This file is not a valid PDF.")
     elif extension == "docx":
         try:
@@ -253,7 +255,7 @@ def process_file():
         flash(str(exc) if isinstance(exc, ProcessingError) else "Processing failed; no output released.", "error")
         return redirect(url_for("index")), 303
     except Exception:
-        app.logger.exception("Document processing failed")
+        app.logger.error("Document processing failed (details suppressed to protect inputs)")
         flash("Unexpected processing error; no output released.", "error")
         return redirect(url_for("index")), 303
 
@@ -281,6 +283,7 @@ def result_page(token):
         file_name=job["filename"],
         detected_language_label=LANGUAGE_LABELS[job["source_language"]],
         final_language_label=LANGUAGE_LABELS[job["final_language"]],
+        analysis_language_label="English",
         target_language_label=(
             "Auto" if job["target"] == "auto" else LANGUAGE_LABELS[job["target"]]
         ),
