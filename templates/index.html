@@ -3,7 +3,8 @@
 <section class="hero" id="top">
   <div class="hero__content" data-animate-on-load>
     <p class="eyebrow">End-to-end medical document workspace</p>
-    <h1>Transform sensitive reports into shareable clinical summaries.</h1>
+    <h1>Explore a best-effort medical document redaction pipeline.</h1>
+    <p class="inline-warning" role="alert">Demo only: Use synthetic documents. Automated PII detection is not guaranteed. Never upload real patient records.</p>
     <p class="hero__lead">
       Upload PDFs, DOCX files, or scanned images. We will extract the text with
       OCR, redact protected health information, translate across English,
@@ -40,6 +41,7 @@
     method="post"
     enctype="multipart/form-data"
   >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
     <div class="upload-dropzone" data-dropzone>
       <input
         class="upload-input"
