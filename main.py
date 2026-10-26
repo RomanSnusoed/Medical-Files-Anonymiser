@@ -1,102 +1,58 @@
-from extractors import (
-    extract_text_from_pdf,
-    extract_text_from_image,
-    extract_text_from_docx,
-)
-from cleaners import process_text_in_chunks
-from openai_utils import generate_explanation
-from translator import (
-    translate_text_de_to_en,
-    translate_text_en_to_de,
-    translate_text_ru_to_en,
-    translate_text_en_to_ru,
-)
-from langdetect import detect
-from pdf_generator import generate_pdf_with_highlights
+"""Command-line entry point for the synthetic-data portfolio demonstration."""
+from __future__ import annotations
 
-mapping = {
-    "pdf": extract_text_from_pdf,
-    "docx": extract_text_from_docx,
-    "image": extract_text_from_image,
-}
+import argparse
+from pathlib import Path
+
+from langdetect import DetectorFactory, detect
+
+from app import EXTRACTORS, LANGUAGE_LABELS, _anonymize, _validate_file, allowed_file
+from pdf_generator import build_pdf_bytes
+
+DetectorFactory.seed = 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Best-effort PII redaction on synthetic medical files")
+    parser.add_argument("document", type=Path, help="Synthetic PDF, DOCX or image")
+    parser.add_argument("--target", choices=["auto", "en", "de", "ru"], default="auto")
+    parser.add_argument("--output", type=Path, help="Optional .txt or .pdf output")
+    parser.add_argument(
+        "--verbose-logs", action="store_true",
+        help="Include detected PII in console logs (synthetic data ONLY)",
+    )
+    args = parser.parse_args()
+    if not args.document.is_file() or not allowed_file(args.document.name):
+        parser.error("Document must exist and use a supported extension")
+    extension = args.document.suffix.removeprefix(".").lower()
+    _validate_file(args.document, extension)
+    text = EXTRACTORS[extension](args.document)
+    if not text or not text.strip():
+        parser.error("Document contains no readable text")
+    if len(text) > 200_000:
+        parser.error("Document exceeds processing text limit")
+    source = detect(text)
+    if source not in LANGUAGE_LABELS:
+        parser.error("Only English, German and Russian are supported")
+    _english, cleaned, _lang, logs, _steps = _anonymize(
+        text, source, args.target, verbose=args.verbose_logs
+    )
+    if args.output:
+        if args.output.suffix.lower() == ".pdf":
+            args.output.write_bytes(build_pdf_bytes(cleaned))
+        elif args.output.suffix.lower() == ".txt":
+            args.output.write_text(cleaned, encoding="utf-8")
+        else:
+            parser.error("--output must end in .txt or .pdf")
+        print(f"Output written to {args.output}")
+    else:
+        print(cleaned)
+    if args.verbose_logs:
+        print("\nDetector logs (synthetic data ONLY):")
+        print("\n".join(logs))
+    print("\nNote: Automated redaction does not guarantee anonymity.")
+    return 0
+
 
 if __name__ == "__main__":
-    file_path = (
-        r"C:\Users\38066\Dr-Adem Dropbox\Team General\AI\Reports\Dummy Text files\001fakede.docx"
-    )
-    extracted_text = ""
-
-    # Extract text depending on file type
-    if file_path.endswith(".pdf"):
-        extracted_text = extract_text_from_pdf(file_path)
-    elif file_path.endswith(".docx"):
-        extracted_text = extract_text_from_docx(file_path)
-    elif file_path.endswith((".jpg", ".jpeg", ".png", ".tiff")):
-        extracted_text = extract_text_from_image(file_path)
-    else:
-        print("Unsupported file type.")
-        extracted_text = ""
-
-    if extracted_text:
-        print("Extracted text:")
-        print(extracted_text)
-
-        # Detect language
-        detected_language = detect(extracted_text)
-        print(f"Detected language: {detected_language}")
-
-        # Translate to English if needed
-        if detected_language == "de":
-            print("Document is in German. Translating to English...")
-            extracted_text = translate_text_de_to_en(extracted_text)
-            print("Translated text:")
-            print(extracted_text)
-        elif detected_language == "ru":
-            print("Document is in Russian. Translating to English...")
-            extracted_text = translate_text_ru_to_en(extracted_text)
-            print("Translated text:")
-            print(extracted_text)
-
-        # Clean the text
-        cleaned_text, logs = process_text_in_chunks(extracted_text, chunk_size=300)
-        print("\nCleaned text:")
-        print(cleaned_text)
-
-        # Translate cleaned text back to original language if needed
-        if detected_language == "de":
-            print("Translating cleaned text back to German...")
-            cleaned_text = translate_text_en_to_de(cleaned_text)
-            print("Cleaned text in German:")
-            print(cleaned_text)
-        elif detected_language == "ru":
-            print("Translating cleaned text back to Russian...")
-            cleaned_text = translate_text_en_to_ru(cleaned_text)
-            print("Cleaned text in Russian:")
-            print(cleaned_text)
-
-        # Generate PDF with highlights
-        generate_pdf_with_highlights(
-            extracted_text, cleaned_text, output_folder="output_folder"
-        )
-
-        # Ask user if they want to send text to ChatGPT for explanation
-        user_input = input(
-            "Send text to ChatGPT for explanation? (yes/no): "
-        ).strip().lower()
-        if user_input in ["yes", "y", "ja", "да"]:
-            explanation = generate_explanation(cleaned_text)
-            print("\nExplanation:")
-            print(explanation)
-        else:
-            print("Request to ChatGPT cancelled.")
-
-        # Ask user if they want to show cleaning logs
-        user_input = input(
-            "Show cleaning logs? (yes/no): "
-        ).strip().lower()
-        if user_input in ["yes", "y", "ja", "да"]:
-            print("\nLogs:")
-            for log in logs:
-                print(log)
-        else:
-            print("Cleaning logs not displayed.")
+    raise SystemExit(main())
