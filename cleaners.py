@@ -1,177 +1,209 @@
+"""PII detection and safe redaction of overlapping entity spans.
 
-from presidio_analyzer import AnalyzerEngine
-from transformers import pipeline
+Treat this as a best-effort detection system, not a guarantee of anonymisation.
+"""
+from __future__ import annotations
+
+import os
 import re
-from langdetect import detect
-from roberta import XlmRobertaNER
-from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from pathlib import Path
+from typing import Iterable
 
-# Load ignore words list
+REDACTION = "[REDACTED]"
+DEFAULT_CHUNK_SIZE = 1200
+DEFAULT_OVERLAP = 180
 
-def load_ignore_words(file_path="ignorewords.txt"):
+
+class AnonymizationError(RuntimeError):
+    """A required detection stage could not complete reliably."""
+
+
+def load_ignore_words(file_path: str | Path | None = None) -> set[str]:
+    path = Path(file_path) if file_path else Path(__file__).with_name("ignorewords.txt")
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return set(line.strip() for line in f if line.strip())
+        with path.open(encoding="utf-8") as stream:
+            return {line.strip().casefold() for line in stream if line.strip()}
     except FileNotFoundError:
-        print(f"File {file_path} not found. Ignore words not loaded.")
         return set()
 
-# Load ignore words
+
 ignorewords = load_ignore_words()
 
-# Initialize models
-analyzer = AnalyzerEngine()
-xlmr_recognizer = XlmRobertaNER()
-ner_pipeline = pipeline("ner", model="Davlan/xlm-roberta-base-ner-hrl", grouped_entities=True)
 
-def apply_replacements(text, replacements):
-    """Apply replacements, checking for overlaps."""
-    replacements.sort(key=lambda x: x[0], reverse=True)  # Sort descending
-    for start, end, repl in replacements:
-        text = text[:start] + repl + text[end:]
-    return text
+@lru_cache(maxsize=1)
+def _get_analyzer():
+    from presidio_analyzer import AnalyzerEngine
+    return AnalyzerEngine()
 
-def is_valid_date_format(text):
-    """Checks if the text matches a date format or contains age."""
-    date_patterns = [
-        r"\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b",  # dd/mm/yyyy or dd-mm-yyyy
-        r"\b\d{4}-\d{2}-\d{2}\b",  # yyyy-mm-dd
-        r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s\d{1,2},\s\d{4}\b",  # Month dd, yyyy
-        r"\b\d{1,2}\s(?:January|February|March|April|May|June|July|August|September|October|November|December),?\s\d{4}\b",  # dd Month yyyy
-        r"\b(?:Date of Birth|DOB|Report Date):?\s*\d{1,2}\s(?:January|February|March|April|May|June|July|August|September|October|November|December),?\s\d{4}\b",  # Date of Birth: dd Month yyyy
-        r"\b(?:Date of Birth|DOB|Report Date):?\s*\d{1,2}[/-]\d{1,2}[/-]\d{4}\b"  # Date of Birth: dd/mm/yyyy
-    ]
-    # Check if text matches date format
-    if any(re.search(pattern, text) for pattern in date_patterns):
-        return True
 
-    # Additional check for age
-    age_patterns = [
-        r"\b\d{1,3}\s?(?:year|years|yr|yrs)\s?old\b",  # e.g., "29 years old", "29yr old"
-        r"\b\d{1,3}\s?(?:year|years|yr|yrs)\b",        # e.g., "29 years", "29yr"
-        r"\b\d{1,3}-?(?:year|years|yr|yrs)-?old\b"     # e.g., "29-year-old", "29yr-old"
-    ]
-    if any(re.search(pattern, text, re.IGNORECASE) for pattern in age_patterns):
-        return True
+@lru_cache(maxsize=1)
+def _get_ner_pipeline():
+    from transformers import pipeline
+    return pipeline(
+        "token-classification",
+        model="Davlan/xlm-roberta-base-ner-hrl",
+        aggregation_strategy="simple",
+    )
 
-    return False
 
-def clean_and_remove_personal_info(text):
-    original_text = text
-    logs = []
+def merge_replacements(
+    replacements: Iterable[tuple[int, int, str]], text_length: int
+) -> list[tuple[int, int, str]]:
+    """Return valid, non-overlapping spans in source-text coordinates."""
+    spans = sorted(
+        (start, end)
+        for start, end, _ in replacements
+        if isinstance(start, int)
+        and isinstance(end, int)
+        and 0 <= start < end <= text_length
+    )
+    if not spans:
+        return []
 
-    presidio_logs = []
-    roberta_logs = []
-    regex_logs = []
+    merged = [[spans[0][0], spans[0][1]]]
+    for start, end in spans[1:]:
+        if start < merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    return [(start, end, REDACTION) for start, end in merged]
 
-    replacements = []  # Array of replacements: (start, end, "[REDACTED]")
 
-    # --- Presidio ---
-    # presidio_logs.append("found by Presidio")
+def apply_replacements(text: str, replacements: Iterable[tuple[int, int, str]]) -> str:
+    """Apply replacement spans once, merging overlapping detector outputs."""
+    merged = merge_replacements(replacements, len(text))
+    result: list[str] = []
+    cursor = 0
+    for start, end, marker in merged:
+        result.extend((text[cursor:start], marker))
+        cursor = end
+    result.append(text[cursor:])
+    return "".join(result)
+
+
+def is_valid_date_format(text: str) -> bool:
+    patterns = (
+        r"\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b",
+        r"\b\d{4}-\d{2}-\d{2}\b",
+        r"\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s*,?\s*\d{4}\b",
+        r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b",
+        r"\b\d{1,3}[ -]?(?:year|years|yr|yrs)(?:[ -]?old)?\b",
+    )
+    return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
+
+
+PATTERNS = {
+    "EMAIL_ADDRESS": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
+    "PATIENT_ID": re.compile(r"\bPatient ID:\s*[A-Z]{2}-\d{4}\b", re.IGNORECASE),
+    "PATIENT_FILE": re.compile(r"\bPatient File:\s*[A-Z]{2}-[A-Z]{3}-\d{5}\b", re.IGNORECASE),
+    "PHONE_NUMBER": re.compile(r"(?<!\w)(?:\+\d{1,3}[ -]?)?(?:\(\d{2,4}\)|\d{2,4})[ -.]*\d{3,4}[ -.]*\d{3,5}(?!\w)"),
+}
+
+# This model labels entities PER/LOC/ORG/MISC (not PERSON/LOCATION).
+NER_LABELS = {"PER", "LOC", "ORG"}
+
+
+def _windows(text: str, chunk_size: int, overlap: int):
+    if chunk_size <= 0 or not 0 <= overlap < chunk_size // 2:
+        raise ValueError("chunk_size must be positive and overlap smaller than half")
+    start = 0
+    while start < len(text):
+        end = min(start + chunk_size, len(text))
+        # Preserve a little surrounding context without losing global offsets.
+        if end < len(text):
+            split = max(text.rfind(" ", start + chunk_size // 2, end), text.rfind("\n", start + chunk_size // 2, end))
+            if split > start:
+                end = split + 1
+        yield start, end, text[start:end]
+        if end == len(text):
+            break
+        start = end - overlap
+
+
+def _should_redact(value: str) -> bool:
+    return bool(value.strip()) and value.strip().casefold() not in ignorewords
+
+
+def _log(source: str, label: str, start: int, end: int, value: str, include_pii: bool) -> str:
+    message = f"{source}: detected {label} at [{start}:{end}]"
+    return f"{message} = {value!r}" if include_pii else message
+
+
+def process_text_in_chunks(
+    text: str,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    overlap: int = DEFAULT_OVERLAP,
+    *,
+    include_pii: bool = False,
+) -> tuple[str, list[str]]:
+    """Redact text with overlapping windows, retaining original absolute offsets.
+
+    Both NLP detectors are mandatory. On model failure, abort rather than
+    returning incompletely cleaned medical content.
+    """
+    if not text:
+        return "", []
+    if overlap >= chunk_size // 2:
+        overlap = max(0, chunk_size // 4)
+    if chunk_size < 2:
+        raise ValueError("chunk_size must be at least 2")
+
     try:
-        language = detect(original_text)
-        presidio_results = analyzer.analyze(
-            text=original_text,
-            language=language,
-            entities=["PERSON", "LOCATION", "EMAIL", "DATE_TIME"]
-        )
-        for result in presidio_results:
-            pii = original_text[result.start:result.end]
-            if result.entity_type == "DATE_TIME":
-                # Check if entity matches date or age format
-                if not is_valid_date_format(pii):
-                    presidio_logs.append(f"Ignoring non-date entity: {pii}")
-                    continue
-            if pii in ignorewords:
-                presidio_logs.append(f"Ignoring PII: {pii} (type: {result.entity_type})")
-                continue
-            presidio_logs.append(f"Removing PII: {pii} (type: {result.entity_type})")
-            replacements.append((result.start, result.end, "[REDACTED]"))
-    except Exception as e:
-        presidio_logs.append(f"Presidio error: {e}")
+        analyzer = _get_analyzer()
+        ner = _get_ner_pipeline()
+    except Exception as exc:
+        raise AnonymizationError("Could not initialize PII detection models") from exc
 
-    # --- XLM-R ---
-    # roberta_logs.append("found by xlm-roberta...")
+    replacements: list[tuple[int, int, str]] = []
+    logs: list[str] = []
     try:
-        entities = ner_pipeline(original_text)
-        for ent in entities:
-            word = original_text[ent['start']:ent['end']]
-            if ent['entity_group'] == "DATE_TIME":
-                # Check if entity matches date or age format
-                if not is_valid_date_format(word):
-                    roberta_logs.append(f"Ignoring non-date entity: {word}")
+        for offset, _end, window in _windows(text, chunk_size, overlap):
+            presidio_results = analyzer.analyze(
+                text=window,
+                language="en",
+                entities=["PERSON", "LOCATION", "EMAIL_ADDRESS", "PHONE_NUMBER", "DATE_TIME"],
+            )
+            for entity in presidio_results:
+                start, end = int(entity.start), int(entity.end)
+                if not 0 <= start < end <= len(window):
                     continue
-            if word in ignorewords:
-                roberta_logs.append(f"Ignoring entity: {word} (type: {ent['entity_group']})")
-                continue
-            roberta_logs.append(f"Removing entity: {word} (type: {ent['entity_group']})")
-            replacements.append((ent['start'], ent['end'], "[REDACTED]"))
-    except Exception as e:
-        roberta_logs.append(f"NER error: {e}")
+                value = window[start:end]
+                label = entity.entity_type
+                if label == "DATE_TIME" and not is_valid_date_format(value):
+                    continue
+                if _should_redact(value):
+                    replacements.append((offset + start, offset + end, REDACTION))
+                    logs.append(_log("Presidio", label, offset + start, offset + end, value, include_pii))
 
-    # --- Regex ---
-    # regex_logs.append("found by regular expressions...")
+            for entity in ner(window):
+                label = str(entity.get("entity_group", "")).upper()
+                if label not in NER_LABELS:
+                    continue
+                start, end = int(entity["start"]), int(entity["end"])
+                if not 0 <= start < end <= len(window):
+                    continue
+                value = window[start:end]
+                if _should_redact(value):
+                    replacements.append((offset + start, offset + end, REDACTION))
+                    logs.append(_log("XLM-R", label, offset + start, offset + end, value, include_pii))
 
-    def process_regex(pattern, label, original_text, regex_logs, replacements):
-        """Processes regex synchronously."""
-        matches = re.finditer(pattern, original_text)
-        local_logs = []  # Local logs for current thread
-        for match in matches:
-            match_text = match.group()
-            if match_text in ignorewords or match_text == "[REDACTED]":
-                local_logs.append(f"Ignoring {label}: {match_text}")
-                continue
-            local_logs.append(f"Removing {label}: {match_text}")
-            replacements.append((match.start(), match.end(), "[REDACTED]"))
-        regex_logs.extend(local_logs)  # Add logs to main list after processing
+        # Regexes scan the complete original text; boundaries never split IDs.
+        for label, pattern in PATTERNS.items():
+            for match in pattern.finditer(text):
+                if _should_redact(match.group()):
+                    replacements.append((match.start(), match.end(), REDACTION))
+                    logs.append(
+                        _log("Regex", label, match.start(), match.end(), match.group(), include_pii)
+                    )
+    except Exception as exc:
+        raise AnonymizationError("PII detection failed; no document was released") from exc
 
-    phone_pattern = r"\+?\d{1,4}?[-.\s]?\(?\d{1,4}?\)?[-.\s]?\d{2,4}[-.\s]?\d{2,4}[-.\s]?\d{0,9}"
-    email_pattern = r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"
-    patient_id_pattern = r"Patient ID:\s*[A-Z]{2}-\d{4}"
-    patient_file_pattern = r"Patient File:\s*[A-Z]{2}-[A-Z]{3}-\d{5}"
-
-    # Asynchronous regex processing
-    with ThreadPoolExecutor() as executor:
-        executor.submit(process_regex, phone_pattern, "phone number", original_text, regex_logs, replacements)
-        executor.submit(process_regex, email_pattern, "email", original_text, regex_logs, replacements)
-        executor.submit(process_regex, patient_id_pattern, "patient ID", original_text, regex_logs, replacements)
-        executor.submit(process_regex, patient_file_pattern, "patient file", original_text, regex_logs, replacements)
-
-    # --- Apply replacements ---
-    cleaned_text = apply_replacements(original_text, replacements)
-
-    logs.extend(presidio_logs)
-    logs.extend(roberta_logs)
-    logs.extend(regex_logs)
-
-    return cleaned_text, logs
-
-# rewrite in multiprocessing
-
-def process_text_in_chunks(text, chunk_size=300):
-    """Splits text into smaller chunks and processes them in parallel."""
-    from concurrent.futures import ThreadPoolExecutor
-
-    # Split text into chunks
-    chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
-    cleaned_chunks = [None] * len(chunks)  # Preserve order
-    all_logs = [None] * len(chunks)  # Preserve order
-
-    def process_chunk(index, chunk):
-        """Processes a single chunk of text."""
-        cleaned_chunk, logs = clean_and_remove_personal_info(chunk)
-        cleaned_chunks[index] = cleaned_chunk
-        all_logs[index] = logs
-
-    # Asynchronous chunk processing
-    with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(process_chunk, i, chunk) for i, chunk in enumerate(chunks)]
-        for future in futures:
-            future.result()  # Wait for all threads to finish
-
-    # Combine cleaned chunks
-    cleaned_text = ''.join(cleaned_chunks)
-    logs = [log for chunk_logs in all_logs for log in chunk_logs]  # Preserve log order
-    return cleaned_text, logs
+    merged = merge_replacements(replacements, len(text))
+    logs.append(f"Completed redaction: {len(merged)} unique spans")
+    return apply_replacements(text, merged), logs
 
 
+def clean_and_remove_personal_info(text: str, *, include_pii: bool = False):
+    """Compatibility entry point for existing callers."""
+    return process_text_in_chunks(text, include_pii=include_pii)
