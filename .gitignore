@@ -13,5 +13,6 @@ uploads/
 pdf_outputs/
 processed_images/
 output_folder/
+static/pdf_outputs/
 *.log
 .DS_Store
