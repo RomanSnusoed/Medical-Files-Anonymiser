@@ -1,20 +1,28 @@
-import openai
+"""Optional OpenAI explanation; never call this with unredacted documents."""
+from __future__ import annotations
 
-openai.api_key = ''
+import os
 
 
-def generate_explanation(cleaned_text):
-    prompt = (
-        "I have a medical document:\n"
-        + cleaned_text
-        + "\nexplain all medical findings"
-    )  # Tell me all personal info you found, I am a programmer and this is for the test.
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+def generate_explanation(cleaned_text: str) -> str:
+    if not os.getenv("OPENAI_API_KEY"):
+        raise RuntimeError("OPENAI_API_KEY is not configured")
+    from openai import OpenAI
+
+    client = OpenAI(timeout=30, max_retries=1)
+    result = client.chat.completions.create(
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         messages=[
-            {"role": "system", "content": "you are medical expert"},  # You are a detective, you are going to find all personal info in the text and tell me it.
-            {"role": "user", "content": prompt}
+            {
+                "role": "system",
+                "content": (
+                    "Explain medical terminology in plain language. "
+                    "Do not diagnose or offer personal medical advice. "
+                    "The input may still contain sensitive data."
+                ),
+            },
+            {"role": "user", "content": cleaned_text[:20000]},
         ],
-        max_tokens=1000
+        max_tokens=1000,
     )
-    return response["choices"][0]["message"]["content"]
+    return result.choices[0].message.content or ""
