@@ -1,6 +1,7 @@
 """Lazy, cached MarianMT translation with token-aware batching."""
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 from threading import Lock
 
@@ -24,6 +25,8 @@ def _get_model_and_tokenizer(model_name):
 
 
 def _translate_text(text, model_name, max_length=500):
+    if max_length < 16:
+        raise ValueError("max_length must be at least 16")
     import torch
     model, tokenizer = _get_model_and_tokenizer(model_name)
     lines = []
@@ -63,3 +66,27 @@ def translate_text_en_to_de(text, max_length=500):
 
 def translate_text_en_to_ru(text, max_length=500):
     return _translate_text(text, MODELS["en", "ru"], max_length)
+
+
+MARKER = "[REDACTED]"
+
+
+def translate_preserving_markers(text: str, source: str, target: str) -> str:
+    """Translate text while keeping redaction placeholders out of the model.
+
+    The lexical content still requires human verification before sharing.
+    """
+    if not text or source == target:
+        return text
+    if source != "en" and target != "en":
+        return translate_preserving_markers(
+            translate_preserving_markers(text, source, "en"), "en", target
+        )
+    model_name = MODELS.get((source, target))
+    if model_name is None:
+        raise ValueError(f"Unsupported translation pair: {source} -> {target}")
+    pieces = re.split(r"(\\[REDACTED\\])", text)
+    return "".join(
+        piece if piece == MARKER or not piece.strip() else _translate_text(piece, model_name)
+        for piece in pieces
+    )
