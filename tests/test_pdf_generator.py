@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import fitz
 import pytest
 
@@ -26,5 +27,5 @@ def test_legacy_wrapper_uses_random_name(tmp_path):
     except RuntimeError as exc:
         pytest.skip(str(exc))
     assert first != second
-    assert (tmp_path / first.split("/")[-1]).exists()
-    assert (tmp_path / second.split("/")[-1]).exists()
+    assert (tmp_path / Path(first).name).exists()
+    assert (tmp_path / Path(second).name).exists()
