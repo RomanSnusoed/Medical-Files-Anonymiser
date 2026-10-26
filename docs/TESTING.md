@@ -19,12 +19,11 @@ After full setup including spaCy model, Tesseract and Hugging Face weights,
 run with synthetic data only:
 
 ```bash
-python main.py demo/synthetic-report.txt
+python main.py demo/synthetic-report.docx
 ```
 
-Note: the CLI supports PDF, DOCX and images, **not** plain .txt input.
-Convert the synthetic text into a DOCX or PDF before running the command,
-or use the in-memory quality evaluation script below.
+Create a synthetic DOCX/PDF/image first. The CLI cannot read plain .txt
+input; use the evaluation script below for in-memory synthetic text.
 
 Check that the application handles each type:
 - English DOCX with text, header, table and synthetic contact details.
