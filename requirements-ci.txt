@@ -1,0 +1,10 @@
+# Lightweight CI dependencies: NLP models are mocked in unit tests.
+Flask>=3.1,<4
+langdetect==1.0.9
+Pillow>=11,<13
+pytesseract>=0.3.13,<1
+reportlab>=4,<5
+PyMuPDF>=1.24,<2
+python-docx>=1.1,<2
+pytest>=8,<10
+ruff>=0.9,<1
